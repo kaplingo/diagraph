@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Digraph Adventure</title>
+<style>
+  :root{
+    --bg1:#fff7d6;
+    --bg2:#dff7ff;
+    --ink:#23395d;
+    --card:#ffffff;
+    --purple:#7c5cff;
+    --pink:#ff6fb5;
+    --yellow:#ffd84d;
+    --green:#58d68d;
+    --blue:#55b9ff;
+    --red:#ff6b6b;
+    --shadow:0 12px 30px rgba(35,57,93,.14);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;font-family:"Trebuchet MS","Arial Rounded MT Bold",Arial,sans-serif;background:
+    radial-gradient(circle at 10% 10%, rgba(255,216,77,.28), transparent 22%),
+    radial-gradient(circle at 90% 15%, rgba(255,111,181,.22), transparent 24%),
+    linear-gradient(135deg,var(--bg1),var(--bg2)); color:var(--ink); overflow:hidden;}
+  body{display:flex;align-items:center;justify-content:center;}
+  .app{width:min(1100px,96vw);height:min(720px,96vh);display:grid;grid-template-rows:auto auto 1fr auto;gap:12px;padding:14px;}
+  .topbar{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;}
+  .title{font-size:clamp(24px,3.2vw,42px);font-weight:900;letter-spacing:.5px;display:flex;align-items:center;gap:10px;}
+  .title .bubble{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--yellow);box-shadow:var(--shadow);}
+  .score{font-size:18px;font-weight:900;background:#fff;padding:10px 16px;border-radius:18px;box-shadow:var(--shadow);}
+  .progressWrap{height:16px;background:#fff;border-radius:20px;box-shadow:inset 0 0 0 2px rgba(35,57,93,.08);overflow:hidden;}
+  .progress{height:100%;width:0;background:linear-gradient(90deg,var(--purple),var(--pink),var(--yellow));transition:width .35s ease;}
+  .gameCard{
+    background:rgba(255,255,255,.92);
+    border-radius:30px;
+    box-shadow:var(--shadow);
+    padding:18px;
+    display:grid;
+    grid-template-columns:1.15fr .85fr;
+    gap:18px;
+    min-height:0;
+    position:relative;
+    overflow:hidden;
+  }
+  .gameCard:before,.gameCard:after{
+    content:"";position:absolute;border-radius:50%;opacity:.12;pointer-events:none;
+  }
+  .gameCard:before{width:180px;height:180px;background:var(--purple);right:-60px;top:-70px;}
+  .gameCard:after{width:140px;height:140px;background:var(--yellow);left:-40px;bottom:-50px;}
+  .left,.right{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;z-index:1}
+  .stageLabel{
+    font-size:14px;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;
+    background:#eef3ff;padding:7px 12px;border-radius:999px;margin-bottom:8px;
+  }
+  .prompt{font-size:clamp(20px,2.5vw,32px);font-weight:900;text-align:center;margin:2px 0 10px;}
+  .wordPuzzle{
+    font-size:clamp(54px,8vw,96px);font-weight:900;letter-spacing:8px;
+    color:var(--purple);text-shadow:0 4px 0 rgba(124,92,255,.10);
+    min-height:110px;display:flex;align-items:center;justify-content:center;text-align:center;
+  }
+  .speaker{
+    width:74px;height:74px;border:none;border-radius:50%;background:linear-gradient(135deg,var(--blue),#8dd7ff);
+    box-shadow:0 8px 0 #399ad9, 0 14px 24px rgba(85,185,255,.28);
+    color:white;font-size:34px;cursor:pointer;transition:.15s transform,.15s box-shadow;
+  }
+  .speaker:active{transform:translateY(5px);box-shadow:0 3px 0 #399ad9,0 8px 16px rgba(85,185,255,.25);}
+  .hint{font-size:14px;color:#60708f;margin-top:8px;text-align:center}
+  .choices{display:grid;grid-template-columns:repeat(3,minmax(90px,1fr));gap:12px;width:100%;max-width:520px;}
+  .choice{
+    border:none;border-radius:18px;padding:16px 8px;font-size:28px;font-weight:900;text-transform:uppercase;
+    color:var(--ink);background:#fff;box-shadow:0 7px 0 #d9e2f2,0 12px 18px rgba(35,57,93,.10);
+    cursor:pointer;transition:.15s transform,.15s box-shadow,.15s background;
+  }
+  .choice:hover{transform:translateY(-2px)}
+  .choice:active{transform:translateY(4px);box-shadow:0 3px 0 #d9e2f2;}
+  .choice.correct{background:#dff8e8;box-shadow:0 7px 0 #9ad8af;}
+  .choice.wrong{background:#ffe4e4;animation:shake .25s linear 1;}
+  .imageGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%;max-width:520px;}
+  .pic{
+    border:none;background:#fff;border-radius:24px;min-height:138px;padding:10px;cursor:pointer;
+    box-shadow:0 8px 0 #d9e2f2,0 12px 18px rgba(35,57,93,.10);
+    display:grid;place-items:center;transition:.15s transform,.15s box-shadow,.15s background;
+  }
+  .pic:hover{transform:translateY(-2px)}
+  .pic:active{transform:translateY(4px);box-shadow:0 3px 0 #d9e2f2;}
+  .pic.correct{background:#dff8e8;box-shadow:0 8px 0 #9ad8af;}
+  .pic.wrong{background:#ffe4e4;animation:shake .25s linear 1;}
+  .emoji{font-size:72px;line-height:1}
+  .miniArt{width:92px;height:92px}
+  .fullWord{font-size:clamp(54px,8vw,96px);font-weight:900;color:var(--pink);letter-spacing:4px;text-align:center;}
+  .spark{position:absolute;font-size:26px;animation:pop .6s ease-out forwards;pointer-events:none;z-index:3}
+  .feedback{min-height:34px;font-size:22px;font-weight:900;text-align:center;margin-top:10px;}
+  .footer{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:14px;color:#60708f}
+  .soundNote{background:rgba(255,255,255,.72);padding:8px 12px;border-radius:14px}
+  .restart{border:none;background:#fff;border-radius:14px;padding:9px 13px;font-weight:900;cursor:pointer;box-shadow:var(--shadow)}
+  .hidden{display:none!important}
+  .finish{grid-column:1/-1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:14px;z-index:2}
+  .finish h2{font-size:clamp(36px,6vw,72px);margin:0;color:var(--purple)}
+  .finish p{font-size:22px;margin:0}
+  .bigStar{font-size:90px;animation:float 1.3s ease-in-out infinite alternate}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  @keyframes pop{0%{transform:scale(.3) translateY(0);opacity:1}100%{transform:scale(1.5) translateY(-70px);opacity:0}}
+  @keyframes float{from{transform:translateY(0) rotate(-5deg)}to{transform:translateY(-10px) rotate(5deg)}}
+  @media (max-width:760px){
+    html,body{overflow:auto}
+    .app{height:auto;min-height:100vh}
+    .gameCard{grid-template-columns:1fr;padding:14px}
+    .wordPuzzle,.fullWord{font-size:54px;min-height:80px}
+    .choices{grid-template-columns:repeat(3,1fr)}
+    .choice{font-size:22px;padding:13px 6px}
+    .pic{min-height:110px}
+    .emoji{font-size:58px}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="title"><span class="bubble">🔤</span></div>
+    <div class="score"><span id="count">1</span> / <span id="total">24</span></div>
+  </div>
+
+  <div class="progressWrap" aria-label="progress"><div class="progress" id="progress"></div></div>
+
+  <section class="gameCard" id="gameCard">
+    <div class="left" id="leftPanel">
+      <div class="stageLabel hidden" id="stageLabel"></div>
+      <div class="prompt hidden" id="prompt"></div>
+      <div class="wordPuzzle" id="wordPuzzle">_ _ ip</div>
+      <button class="speaker" id="speaker" type="button" aria-label="Hear the word">🔊</button>
+      
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+    </div>
+
+    <div class="right" id="rightPanel">
+      <div class="choices" id="choices"></div>
+      <div class="imageGrid hidden" id="imageGrid"></div>
+    </div>
+
+    <div class="finish hidden" id="finish">
+      <div class="bigStar">🌟</div>
+      <h2>Great Job!</h2>
+      <p>You finished all the digraph words!</p>
+      <button class="restart" id="playAgain" type="button">Play Again 🔁</button>
+    </div>
+  </section>
+
+  <div class="footer">
+    <div class="soundNote">🎧 Best with sound on.</div>
+    <button class="restart" id="restart" type="button">Restart</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const wordBank = [
+    {word:"ship", target:"sh", art:"🚢", distract:["🐚","🐟"]},
+    {word:"shell", target:"sh", art:"🐚", distract:["🦈","🧀"]},
+    {word:"fish", target:"sh", art:"🐟", distract:["🐭","👑"]},
+    {word:"shark", target:"sh", art:"🦈", distract:["🐔","☁️"]},
+
+    {word:"chips", target:"ch", art:"🍟", distract:["🧀","🐟"]},
+    {word:"chicken", target:"ch", art:"🐔", distract:["🪑","🐭"]},
+    {word:"chair", target:"ch", art:"🪑", distract:["🏠","👑"]},
+    {word:"cheese", target:"ch", art:"🧀", distract:["🍟","🐔"]},
+
+    {word:"king", target:"ng", art:"👑", distract:["💍","🪽"]},
+    {word:"ring", target:"ng", art:"💍", distract:["👑","🎤"]},
+    {word:"sing", target:"ng", art:"🎤", distract:["💍","🪽"]},
+    {word:"wing", target:"ng", art:"🪽", distract:["🎤","☁️"]},
+
+    {word:"three", target:"th", art:"3️⃣", distract:["🛁","🏠"]},
+    {word:"bath", target:"th", art:"🛁", distract:["👄","🐭"]},
+
+    {word:"mouth", target:"ou", art:"👄", distract:["🏠","☁️"]},
+    {word:"mouse", target:"ou", art:"🐭", distract:["👄","🏠"]},
+    {word:"house", target:"ou", art:"🏠", distract:["🐭","☁️"]},
+    {word:"cloud", target:"ou", art:"☁️", distract:["🏠","☀️"]},
+
+    {word:"day", target:"ay", art:"☀️", distract:["💰","🙏"]},
+    {word:"pay", target:"ay", art:"💰", distract:["☀️","🙏"]},
+    {word:"spray", target:"ay", art:"SPRAY", distract:["🍽️","☀️"], custom:"spray"},
+    {word:"tray", target:"ay", art:"TRAY", distract:["💰","🙏"], custom:"tray"},
+    {word:"pray", target:"ay", art:"🙏", distract:["☀️","💰"]}
+  ];
+
+  let words = [];
+  const digraphs = ["sh","ch","ng","th","ou","ay"];
+  const app = document.getElementById("app");
+  const count = document.getElementById("count");
+  const total = document.getElementById("total");
+  const progress = document.getElementById("progress");
+  const wordPuzzle = document.getElementById("wordPuzzle");
+  const speaker = document.getElementById("speaker");
+  const choices = document.getElementById("choices");
+  const imageGrid = document.getElementById("imageGrid");
+  const stageLabel = document.getElementById("stageLabel");
+  const prompt = document.getElementById("prompt");
+  const feedback = document.getElementById("feedback");
+  const finish = document.getElementById("finish");
+  const leftPanel = document.getElementById("leftPanel");
+  const rightPanel = document.getElementById("rightPanel");
+  const restart = document.getElementById("restart");
+  const playAgain = document.getElementById("playAgain");
+  total.textContent = wordBank.length;
+
+  let idx = 0;
+  let stage = 1;
+  let locked = false;
+  let englishVoice = null;
+
+  function loadVoice(){
+    if (!("speechSynthesis" in window)) return;
+    const voices = speechSynthesis.getVoices();
+    englishVoice = voices.find(v => /^en-GB/i.test(v.lang)) ||
+                   voices.find(v => /^en-US/i.test(v.lang)) ||
+                   voices.find(v => /^en/i.test(v.lang)) || null;
+  }
+  if ("speechSynthesis" in window){
+    loadVoice();
+    speechSynthesis.onvoiceschanged = loadVoice;
+  }
+
+  function speak(text){
+    if (!("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = englishVoice?.lang || "en-GB";
+    u.voice = englishVoice;
+    u.rate = 0.82;
+    u.pitch = 1.08;
+    speechSynthesis.speak(u);
+  }
+
+  function puzzleFor(item){
+    const w = item.word.toLowerCase();
+    const t = item.target.toLowerCase();
+    const pos = w.indexOf(t);
+    if (pos < 0) return w;
+    return w.slice(0,pos) + "_ ".repeat(t.length).trim() + w.slice(pos+t.length);
+  }
+
+  function shuffle(arr){
+    const copy = [...arr];
+    for(let i = copy.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  function newQuestionOrder(){
+    words = shuffle(wordBank);
+  }
+
+  function makeSpray(){
+    return `<svg class="miniArt" viewBox="0 0 100 100" aria-label="spray bottle">
+      <rect x="34" y="38" width="30" height="48" rx="8" fill="#8dd7ff"/>
+      <rect x="41" y="27" width="16" height="14" rx="3" fill="#7c5cff"/>
+      <rect x="53" y="24" width="22" height="7" rx="3" fill="#7c5cff"/>
+      <circle cx="82" cy="28" r="3" fill="#55b9ff"/>
+      <circle cx="89" cy="24" r="2.5" fill="#55b9ff"/>
+      <circle cx="92" cy="32" r="2" fill="#55b9ff"/>
+    </svg>`;
+  }
+  function makeTray(){
+    return `<svg class="miniArt" viewBox="0 0 100 100" aria-label="tray">
+      <ellipse cx="50" cy="67" rx="34" ry="11" fill="#ffd84d"/>
+      <rect x="21" y="58" width="58" height="11" rx="5" fill="#f0b83e"/>
+      <circle cx="36" cy="55" r="9" fill="#ff6b6b"/>
+      <rect x="47" y="45" width="22" height="12" rx="4" fill="#58d68d"/>
+    </svg>`;
+  }
+  function visual(v, custom){
+    if(custom==="spray") return makeSpray();
+    if(custom==="tray") return makeTray();
+    return `<div class="emoji" aria-hidden="true">${v}</div>`;
+  }
+
+  function sparkles(){
+    const card = document.getElementById("gameCard");
+    ["⭐","✨","🎉","🌟"].forEach((s,i)=>{
+      const el=document.createElement("div");
+      el.className="spark";
+      el.textContent=s;
+      el.style.left=(35+i*12)+"%";
+      el.style.top=(58-(i%2)*12)+"%";
+      card.appendChild(el);
+      setTimeout(()=>el.remove(),700);
+    });
+  }
+
+  function render(){
+    locked = false;
+    feedback.textContent = "";
+    count.textContent = idx+1;
+    progress.style.width = (idx / words.length * 100) + "%";
+    const item = words[idx];
+
+    leftPanel.classList.remove("hidden");
+    rightPanel.classList.remove("hidden");
+    finish.classList.add("hidden");
+
+    if(stage===1){
+      stageLabel.textContent="";
+      prompt.textContent="";
+      wordPuzzle.className="wordPuzzle";
+      wordPuzzle.textContent=puzzleFor(item);
+      choices.classList.remove("hidden");
+      imageGrid.classList.add("hidden");
+      choices.innerHTML="";
+
+      const distractors = shuffle(digraphs.filter(d => d !== item.target)).slice(0,2);
+      const options = shuffle([item.target, ...distractors]);
+      options.forEach(opt=>{
+        const b=document.createElement("button");
+        b.type="button";
+        b.className="choice";
+        b.textContent=opt;
+        b.addEventListener("click",()=>chooseDigraph(b,opt));
+        choices.appendChild(b);
+      });
+
+      setTimeout(()=>speak(item.word),300);
+    } else {
+      stageLabel.textContent="";
+      prompt.textContent="";
+      wordPuzzle.className="fullWord";
+      wordPuzzle.textContent=item.word.toUpperCase();
+      choices.classList.add("hidden");
+      imageGrid.classList.remove("hidden");
+      imageGrid.innerHTML="";
+
+      const correctObj={value:item.art,correct:true,custom:item.custom||null};
+      const distractObjs=item.distract.map(v=>({value:v,correct:false,custom:null}));
+      shuffle([correctObj,...distractObjs]).forEach(obj=>{
+        const b=document.createElement("button");
+        b.type="button";
+        b.className="pic";
+        b.innerHTML=visual(obj.value,obj.custom);
+        b.setAttribute("aria-label","picture choice");
+        b.addEventListener("click",()=>choosePicture(b,obj.correct));
+        imageGrid.appendChild(b);
+      });
+      setTimeout(()=>speak(item.word),200);
+    }
+  }
+
+  function chooseDigraph(btn,opt){
+    if(locked)return;
+    const item=words[idx];
+    if(opt===item.target){
+      locked=true;
+      btn.classList.add("correct");
+      feedback.textContent="Great! 🎉";
+      sparkles();
+      setTimeout(()=>{ stage=2; render(); },650);
+    } else {
+      btn.classList.add("wrong");
+      feedback.textContent="Try again! 👂";
+      setTimeout(()=>{btn.classList.remove("wrong");feedback.textContent="";speak(item.word)},450);
+    }
+  }
+
+  function choosePicture(btn,isCorrect){
+    if(locked)return;
+    if(isCorrect){
+      locked=true;
+      btn.classList.add("correct");
+      feedback.textContent="Yes! ⭐";
+      sparkles();
+      setTimeout(()=>{
+        idx++;
+        stage=1;
+        if(idx>=words.length) showFinish();
+        else render();
+      },650);
+    } else {
+      btn.classList.add("wrong");
+      feedback.textContent="Look again! 👀";
+      setTimeout(()=>{btn.classList.remove("wrong");feedback.textContent=""},450);
+    }
+  }
+
+  function showFinish(){
+    speechSynthesis?.cancel?.();
+    progress.style.width="100%";
+    leftPanel.classList.add("hidden");
+    rightPanel.classList.add("hidden");
+    finish.classList.remove("hidden");
+    count.textContent=words.length;
+    speak("Great job! You finished all the digraph words!");
+  }
+
+  speaker.addEventListener("click",()=> {
+    if(idx<words.length) speak(words[idx].word);
+  });
+
+  function reset(){
+    speechSynthesis?.cancel?.();
+    idx=0; stage=1; locked=false;
+    newQuestionOrder();
+    render();
+  }
+  restart.addEventListener("click",reset);
+  playAgain.addEventListener("click",reset);
+
+  newQuestionOrder();
+  render();
+})();
+</script>
+</body>
+</html>
